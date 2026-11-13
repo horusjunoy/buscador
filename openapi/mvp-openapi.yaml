@@ -1,0 +1,1603 @@
+openapi: 3.0.3
+info:
+  title: Buscador e Gestor de Medicamentos — contrato de referência
+  version: 0.1.0-proposto
+  description: Esqueleto contratual para desenvolvimento incremental. Não é serviço implementado; exige revisão de DTOs, regras
+    de autorização, paginação, erro e consentimento antes de homologação.
+servers:
+- url: http://localhost:8000
+  description: DEV local, exemplo somente
+tags:
+- name: Auth
+- name: Family
+- name: Catalog
+- name: Stock
+- name: Treatments
+- name: Doses
+- name: Sync
+- name: Replenishment
+- name: Shopping
+- name: Offers
+- name: Privacy
+- name: Ops
+security:
+- bearerAuth: []
+paths:
+  /v1/auth/signup:
+    post:
+      tags:
+      - Auth
+      operationId: signup
+      summary: Criar conta do titular
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupInput'
+      security: []
+  /v1/auth/login:
+    post:
+      tags:
+      - Auth
+      operationId: login
+      summary: Autenticar titular
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+      security: []
+  /v1/auth/logout:
+    post:
+      tags:
+      - Auth
+      operationId: logout
+      summary: Revogar sessão
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /v1/households:
+    get:
+      tags:
+      - Family
+      operationId: listHouseholds
+      summary: Listar domicílios autorizados
+      responses:
+        '200':
+          description: Lista paginável; envelope exato deve ser fixado e testado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: null
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      tags:
+      - Family
+      operationId: createHousehold
+      summary: Criar domicílio
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: true
+        description: UUID da operação, estável em retry e sincronização
+        schema:
+          type: string
+          format: uuid
+  /v1/households/{household_id}/people:
+    get:
+      tags:
+      - Family
+      operationId: listPeople
+      summary: Listar pessoas autorizadas
+      responses:
+        '200':
+          description: Lista paginável; envelope exato deve ser fixado e testado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Person'
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: path
+        name: household_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags:
+      - Family
+      operationId: createPerson
+      summary: Cadastrar pessoa no domicílio
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Person'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonInput'
+      parameters:
+      - in: path
+        name: household_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: header
+        name: Idempotency-Key
+        required: true
+        description: UUID da operação, estável em retry e sincronização
+        schema:
+          type: string
+          format: uuid
+  /v1/households/{household_id}/permissions:
+    get:
+      tags:
+      - Family
+      operationId: listPermissions
+      summary: Consultar permissões de acesso
+      responses:
+        '200':
+          description: Lista paginável; envelope exato deve ser fixado e testado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: null
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: path
+        name: household_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /v1/catalog/medications:
+    get:
+      tags:
+      - Catalog
+      operationId: searchCatalog
+      summary: Consultar catálogo por nome/GTIN, se disponível
+      responses:
+        '200':
+          description: Lista paginável; envelope exato deve ser fixado e testado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MedicationPresentation'
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: query
+        name: query
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: gtin
+        required: false
+        schema:
+          type: string
+  /v1/owned-medications:
+    post:
+      tags:
+      - Catalog
+      operationId: createOwnedMedication
+      summary: Cadastrar medicamento próprio, inclusive manual
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OwnedMedicationInput'
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: true
+        description: UUID da operação, estável em retry e sincronização
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+      - Catalog
+      operationId: listOwnedMedications
+      summary: Listar medicamentos sob escopo autorizado
+      responses:
+        '200':
+          description: Lista paginável; envelope exato deve ser fixado e testado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: null
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: query
+        name: person_id
+        required: false
+        schema:
+          type: string
+  /v1/stock-lots:
+    post:
+      tags:
+      - Stock
+      operationId: createStockLot
+      summary: Cadastrar lote sem saldo implícito
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockLotInput'
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: true
+        description: UUID da operação, estável em retry e sincronização
+        schema:
+          type: string
+          format: uuid
+  /v1/stock:
+    get:
+      tags:
+      - Stock
+      operationId: getStock
+      summary: Consultar saldo físico, lotes e ressalvas
+      responses:
+        '200':
+          description: Lista paginável; envelope exato deve ser fixado e testado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: null
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: query
+        name: household_id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: owned_medication_id
+        required: false
+        schema:
+          type: string
+  /v1/stock-movements:
+    post:
+      tags:
+      - Stock
+      operationId: postStockMovement
+      summary: Registrar movimento de estoque atômico
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockMovementInput'
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: true
+        description: UUID da operação, estável em retry e sincronização
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+      - Stock
+      operationId: listStockMovements
+      summary: Consultar ledger de estoque
+      responses:
+        '200':
+          description: Lista paginável; envelope exato deve ser fixado e testado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: null
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: query
+        name: household_id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: lot_id
+        required: false
+        schema:
+          type: string
+  /v1/treatments:
+    post:
+      tags:
+      - Treatments
+      operationId: createTreatment
+      summary: Criar plano com orientação cadastrada
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TreatmentInput'
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: true
+        description: UUID da operação, estável em retry e sincronização
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+      - Treatments
+      operationId: listTreatments
+      summary: Listar planos autorizados
+      responses:
+        '200':
+          description: Lista paginável; envelope exato deve ser fixado e testado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: null
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: query
+        name: person_id
+        required: true
+        schema:
+          type: string
+  /v1/treatments/{treatment_id}/versions:
+    put:
+      tags:
+      - Treatments
+      operationId: newTreatmentVersion
+      summary: Criar versão nova sem reescrever eventos passados
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TreatmentInput'
+      parameters:
+      - in: path
+        name: treatment_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: header
+        name: Idempotency-Key
+        required: true
+        description: UUID da operação, estável em retry e sincronização
+        schema:
+          type: string
+          format: uuid
+  /v1/doses:
+    get:
+      tags:
+      - Doses
+      operationId: listDoseOccurrences
+      summary: Listar agenda de ocorrências de doses
+      responses:
+        '200':
+          description: Lista paginável; envelope exato deve ser fixado e testado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DoseOccurrence'
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: query
+        name: person_id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: from
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: to
+        required: true
+        schema:
+          type: string
+  /v1/doses/{occurrence_id}:
+    get:
+      tags:
+      - Doses
+      operationId: getDose
+      summary: Consultar dose e estado atual
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoseOccurrence'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: path
+        name: occurrence_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /v1/doses/{occurrence_id}/events:
+    post:
+      tags:
+      - Doses
+      operationId: recordDoseEvent
+      summary: Confirmar, declarar não tomada ou adiar dose
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoseOccurrence'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoseEventInput'
+      parameters:
+      - in: path
+        name: occurrence_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: header
+        name: Idempotency-Key
+        required: true
+        description: UUID da operação, estável em retry e sincronização
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+      - Doses
+      operationId: doseEventHistory
+      summary: Consultar trilha auditável da dose
+      responses:
+        '200':
+          description: Lista paginável; envelope exato deve ser fixado e testado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: null
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: path
+        name: occurrence_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /v1/sync/mutations:
+    post:
+      tags:
+      - Sync
+      operationId: syncMutations
+      summary: Sincronizar alterações offline com deduplicação
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncRequest'
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: true
+        description: UUID da operação, estável em retry e sincronização
+        schema:
+          type: string
+          format: uuid
+  /v1/alerts:
+    get:
+      tags:
+      - Replenishment
+      operationId: listAlerts
+      summary: Listar alertas de estoque/validade/dose
+      responses:
+        '200':
+          description: Lista paginável; envelope exato deve ser fixado e testado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: null
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: query
+        name: household_id
+        required: true
+        schema:
+          type: string
+  /v1/projections:
+    get:
+      tags:
+      - Replenishment
+      operationId: getProjections
+      summary: Consultar previsão sem alterar saldo físico
+      responses:
+        '200':
+          description: Lista paginável; envelope exato deve ser fixado e testado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: null
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: query
+        name: household_id
+        required: true
+        schema:
+          type: string
+  /v1/shopping-items:
+    get:
+      tags:
+      - Shopping
+      operationId: listShoppingItems
+      summary: Consultar lista de compras
+      responses:
+        '200':
+          description: Lista paginável; envelope exato deve ser fixado e testado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: null
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: query
+        name: household_id
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+      - Shopping
+      operationId: createShoppingItem
+      summary: Criar item de reposição
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShoppingItemInput'
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: true
+        description: UUID da operação, estável em retry e sincronização
+        schema:
+          type: string
+          format: uuid
+  /v1/shopping-items/{item_id}/receive:
+    post:
+      tags:
+      - Shopping
+      operationId: receiveShoppingItem
+      summary: Confirmar recebimento com lote e validade
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceiptInput'
+      parameters:
+      - in: path
+        name: item_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: header
+        name: Idempotency-Key
+        required: true
+        description: UUID da operação, estável em retry e sincronização
+        schema:
+          type: string
+          format: uuid
+  /v1/offers:
+    get:
+      tags:
+      - Offers
+      operationId: searchOffers
+      summary: Buscar ofertas verificáveis por apresentação e CEP
+      responses:
+        '200':
+          description: Lista paginável; envelope exato deve ser fixado e testado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Offer'
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: query
+        name: presentation_id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: cep
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: channel
+        required: false
+        schema:
+          type: string
+  /v1/offers/{offer_id}:
+    get:
+      tags:
+      - Offers
+      operationId: getOffer
+      summary: Consultar oferta com proveniência/TTL
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: path
+        name: offer_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /v1/privacy/export:
+    get:
+      tags:
+      - Privacy
+      operationId: requestDataExport
+      summary: Iniciar exportação de dados da conta
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /v1/privacy/delete-requests:
+    post:
+      tags:
+      - Privacy
+      operationId: requestDeletion
+      summary: Solicitar exclusão conforme política aprovada
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: true
+        description: UUID da operação, estável em retry e sincronização
+        schema:
+          type: string
+          format: uuid
+  /health/live:
+    get:
+      tags:
+      - Ops
+      operationId: healthLive
+      summary: Status técnico de processo (sem dados de saúde)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      security: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Definir estratégia de token, rotação, escopos e armazenamento seguro
+  responses:
+    BadRequest:
+      description: Validação rejeitada
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Sessão inválida/ausente
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: Sem permissão no recurso/pessoa
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: Idempotência, versão ou concorrência conflituosas
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    ApiError:
+      type: object
+      required:
+      - code
+      - message
+      - request_id
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+    Id:
+      type: string
+      format: uuid
+    Person:
+      type: object
+      required:
+      - id
+      - household_id
+      - display_name
+      - timezone
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        household_id:
+          $ref: '#/components/schemas/Id'
+        display_name:
+          type: string
+          minLength: 1
+        timezone:
+          type: string
+          example: America/Sao_Paulo
+    PersonInput:
+      type: object
+      required:
+      - display_name
+      - timezone
+      properties:
+        display_name:
+          type: string
+        timezone:
+          type: string
+    MedicationPresentation:
+      type: object
+      required:
+      - id
+      - name
+      - strength
+      - dosage_form
+      - sale_unit
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        name:
+          type: string
+        ingredient_names:
+          type: array
+          items:
+            type: string
+        strength:
+          type: string
+        dosage_form:
+          type: string
+        package_size:
+          type: string
+          nullable: true
+        sale_unit:
+          type: string
+        gtin:
+          type: string
+          nullable: true
+        source:
+          type: string
+    OwnedMedicationInput:
+      type: object
+      required:
+      - household_id
+      - display_name
+      - strength
+      - dosage_form
+      - unit
+      properties:
+        household_id:
+          $ref: '#/components/schemas/Id'
+        person_id:
+          $ref: '#/components/schemas/Id'
+        presentation_id:
+          $ref: '#/components/schemas/Id'
+        display_name:
+          type: string
+        strength:
+          type: string
+        dosage_form:
+          type: string
+        unit:
+          type: string
+    StockLotInput:
+      type: object
+      required:
+      - household_id
+      - owned_medication_id
+      - unit
+      properties:
+        household_id:
+          $ref: '#/components/schemas/Id'
+        owned_medication_id:
+          $ref: '#/components/schemas/Id'
+        lot_code:
+          type: string
+          nullable: true
+        expires_on:
+          type: string
+          format: date
+          nullable: true
+        unit:
+          type: string
+    StockMovementInput:
+      type: object
+      required:
+      - lot_id
+      - movement_type
+      - quantity
+      - unit
+      - occurred_at
+      - client_event_id
+      properties:
+        lot_id:
+          $ref: '#/components/schemas/Id'
+        movement_type:
+          type: string
+          enum:
+          - entrada_compra
+          - entrada_ajuste
+          - consumo_confirmado
+          - saida_manual
+          - descarte
+          - reversao
+          - ajuste_auditado
+        quantity:
+          type: string
+          pattern: ^-?[0-9]+(\.[0-9]+)?$
+          description: Decimal representado como string; valor e sinal validados pelo tipo de movimento
+        unit:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        client_event_id:
+          $ref: '#/components/schemas/Id'
+        note:
+          type: string
+          maxLength: 1000
+    TreatmentInput:
+      type: object
+      required:
+      - person_id
+      - owned_medication_id
+      - dose_quantity
+      - dose_unit
+      - timezone
+      - schedule_rule
+      - start_date
+      properties:
+        person_id:
+          $ref: '#/components/schemas/Id'
+        owned_medication_id:
+          $ref: '#/components/schemas/Id'
+        dose_quantity:
+          type: string
+        dose_unit:
+          type: string
+        timezone:
+          type: string
+        schedule_rule:
+          type: object
+          additionalProperties: true
+          description: Regra estruturada de horários/recorrência, validada pelo backend
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        instructions_from_professional:
+          type: string
+          maxLength: 3000
+    DoseOccurrence:
+      type: object
+      required:
+      - id
+      - person_id
+      - scheduled_at_utc
+      - status
+      - version
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        person_id:
+          $ref: '#/components/schemas/Id'
+        scheduled_at_utc:
+          type: string
+          format: date-time
+        local_timezone:
+          type: string
+        status:
+          type: string
+          enum:
+          - programada
+          - pendente
+          - adiada
+          - tomada_confirmada
+          - nao_tomada_declarada
+          - sem_confirmacao
+          - cancelada
+        version:
+          type: integer
+          minimum: 0
+        stock_reconciliation_required:
+          type: boolean
+    DoseEventInput:
+      type: object
+      required:
+      - action
+      - client_event_id
+      - occurred_at
+      properties:
+        action:
+          type: string
+          enum:
+          - tomei
+          - nao_tomei
+          - adiar
+          - corrigir
+        client_event_id:
+          $ref: '#/components/schemas/Id'
+        occurred_at:
+          type: string
+          format: date-time
+        snooze_until:
+          type: string
+          format: date-time
+          nullable: true
+        expected_version:
+          type: integer
+        note:
+          type: string
+          maxLength: 1000
+    ShoppingItemInput:
+      type: object
+      required:
+      - household_id
+      - presentation_id
+      - quantity
+      - unit
+      properties:
+        household_id:
+          $ref: '#/components/schemas/Id'
+        presentation_id:
+          $ref: '#/components/schemas/Id'
+        quantity:
+          type: string
+        unit:
+          type: string
+    ReceiptInput:
+      type: object
+      required:
+      - lot_code
+      - expires_on
+      - received_quantity
+      - unit
+      - client_event_id
+      properties:
+        lot_code:
+          type: string
+        expires_on:
+          type: string
+          format: date
+        received_quantity:
+          type: string
+        unit:
+          type: string
+        client_event_id:
+          $ref: '#/components/schemas/Id'
+    Offer:
+      type: object
+      required:
+      - id
+      - source_id
+      - presentation_id
+      - match_type
+      - unit_price
+      - currency
+      - retrieved_at
+      - availability
+      - source_url
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        source_id:
+          type: string
+        presentation_id:
+          $ref: '#/components/schemas/Id'
+        match_type:
+          type: string
+          enum:
+          - exata
+          - alternativa_identificada
+          - incerta
+        unit_price:
+          type: string
+        shipping_fee:
+          type: string
+          nullable: true
+        total_cost:
+          type: string
+          nullable: true
+          description: Preenchido somente quando condições completas
+        currency:
+          type: string
+          example: BRL
+        availability:
+          type: string
+          enum:
+          - em_estoque
+          - sem_estoque
+          - desconhecido
+        retrieved_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        source_url:
+          type: string
+          format: uri
+        price_conditions:
+          type: string
+          nullable: true
+        retail_channel:
+          type: string
+          enum:
+          - retirada
+          - entrega
+          - ambos
+          - desconhecido
+    SyncMutation:
+      type: object
+      required:
+      - client_event_id
+      - entity_type
+      - operation
+      - payload
+      - occurred_at
+      properties:
+        client_event_id:
+          $ref: '#/components/schemas/Id'
+        entity_type:
+          type: string
+        operation:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+        occurred_at:
+          type: string
+          format: date-time
+    SyncRequest:
+      type: object
+      required:
+      - mutations
+      properties:
+        mutations:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/SyncMutation'
+    LoginInput:
+      type: object
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    SignupInput:
+      type: object
+      required:
+      - email
+      - password
+      - accepted_policy_version
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        accepted_policy_version:
+          type: string
+    Session:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          default: Bearer
+        expires_in:
+          type: integer
+      description: Detalhes de estratégia de refresh/armazenamento serão definidos na implementação

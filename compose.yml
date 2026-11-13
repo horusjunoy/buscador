@@ -1,0 +1,55 @@
+name: buscador
+services:
+  db:
+    image: postgres:16.15-bookworm@sha256:bb3e1a57e5407e0a5280b4211980a5e537f4abd234a87014ac979849a78dd825
+    environment:
+      POSTGRES_DB: buscador
+      POSTGRES_USER: buscador_owner
+      POSTGRES_PASSWORD: ${POSTGRES_OWNER_PASSWORD:?Run python scripts/configure_local.py}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Run python scripts/configure_local.py}
+    volumes:
+      - buscador_data:/var/lib/postgresql/data
+      - ./infra/init-app-role.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+    networks: [private]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U buscador_owner -d buscador"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: "no"
+  migrate:
+    image: buscador-local:0.1.0
+    build:
+      context: .
+      dockerfile: infra/Dockerfile
+    environment:
+      DATABASE_URL: ${OWNER_DATABASE_URL:?Configure local environment}
+      GRANT_APP_ROLE: buscador_app
+    command: ["python", "-m", "scripts.migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [private]
+    restart: "no"
+  app:
+    image: buscador-local:0.1.0
+    environment:
+      APP_ENV: local
+      AUTO_MIGRATE: "0"
+      DATABASE_URL: ${APP_DATABASE_URL:?Configure local environment}
+    ports: ["127.0.0.1:${APP_PORT:-8765}:8765"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [private, frontend]
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    restart: "no"
+networks:
+  private:
+    internal: true
+  frontend: {}
+volumes:
+  buscador_data: {}

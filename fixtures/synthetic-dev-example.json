@@ -1,0 +1,37 @@
+{
+  "environment": "DEV/HML ONLY — DADOS TOTALMENTE FICTÍCIOS",
+  "household": {
+    "id": "e34c2a89-1b2a-4c45-8c71-4f26b40ee431",
+    "name": "Família Teste"
+  },
+  "people": [
+    {
+      "id": "6b3f9703-0d1f-4751-9ae1-121c9d789643",
+      "name": "Pessoa Exemplo A",
+      "timezone": "America/Sao_Paulo"
+    },
+    {
+      "id": "e9e8f49b-7a3d-4b18-8996-145f3a9c51c0",
+      "name": "Pessoa Exemplo B",
+      "timezone": "America/Sao_Paulo"
+    }
+  ],
+  "medications": [
+    {
+      "name": "Medicamento Exemplo A",
+      "strength": "10 mg",
+      "dosage_form": "comprimido",
+      "unit": "comprimido",
+      "qty": "30"
+    },
+    {
+      "name": "Medicamento Exemplo B",
+      "strength": "5 mg/mL",
+      "dosage_form": "solução oral",
+      "unit": "mL",
+      "qty": "120"
+    }
+  ],
+  "offers": [],
+  "notice": "Proibido usar medicamentos, doses ou preços de fixture como orientação clínica ou oferta real; preencher somente em ambientes de teste."
+}

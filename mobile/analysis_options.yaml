@@ -1,0 +1,9 @@
+analyzer:
+  errors:
+    unused_import: warning
+linter:
+  rules:
+    - use_build_context_synchronously
+    - avoid_print
+    - cancel_subscriptions
+    - close_sinks
